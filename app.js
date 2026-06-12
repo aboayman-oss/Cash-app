@@ -12,7 +12,7 @@ const APP_CONFIG = {
   users: {
     "Ayman": "3009",
     "Sakr": "3009",
-    "El3taby": "154208"
+    "El3taby": "154208", // Fixed: Added missing comma
     "S3od": "3009"
   }
 };
@@ -123,9 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
   async function fetchDashboardData() {
     try {
       const data = await apiCall({ method: 'GET' });
-      // Assuming backend returns { status: 'success', data: { balance: 100, history: [...] } }
-      currentBalance = parseFloat(data.data.balance) || 0;
-      renderDashboard(currentBalance, data.data.history || []);
+      // Fixed: Mapped correctly to the Apps Script output (currentBalance and transactions)
+      currentBalance = parseFloat(data.data.currentBalance) || 0;
+      renderDashboard(currentBalance, data.data.transactions || []);
     } catch (error) {
       // Error is already handled by apiCall's catch block
       console.error("Dashboard fetch failed:", error);
@@ -157,6 +157,10 @@ document.addEventListener("DOMContentLoaded", () => {
     loginView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
     
+    // Update logged-in user display in the UI (Optional but good practice if you have the ID)
+    const loggedInUserDisplay = document.getElementById('logged-in-user');
+    if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUser;
+
     showNotification(`Welcome, ${currentUser}!`, false);
     
     // Fetch user dashboard data
@@ -173,11 +177,14 @@ document.addEventListener("DOMContentLoaded", () => {
     amountInput.value = '';
     descInput.value = '';
     historyContainer.innerHTML = '';
-    currentBalanceDisplay.textContent = '0';
+    currentBalanceDisplay.textContent = '0.00';
     
     // Switch views
     dashboardView.classList.add('hidden');
     loginView.classList.remove('hidden');
+    
+    // Reset dropdown to default
+    userDropdown.selectedIndex = 0;
     showNotification("Logged out successfully.", false);
   });
 
@@ -249,34 +256,33 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Build history UI
+    // Fixed: Custom dark-mode UI styling injected here
     history.forEach(item => {
       const isVoid = item.type === 'VOID';
-      
-      // Create wrapper div
-      const row = document.createElement('div');
-      row.className = `flex justify-between items-center p-3 border-b border-gray-200 ${isVoid ? 'bg-gray-100 opacity-60' : 'bg-white'}`;
-      
-      // Format transaction type and sign
       const isDeposit = item.type === 'IN';
-      const amountColor = isDeposit ? 'text-green-600' : (isVoid ? 'text-gray-500' : 'text-red-600');
+      
+      const amountColor = isDeposit ? 'text-emerald-400' : (isVoid ? 'text-gray-500 line-through' : 'text-rose-400');
       const sign = isDeposit ? '+' : (isVoid ? '' : '-');
+      const formattedDate = new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-      // HTML template for the row
+      const row = document.createElement('div');
+      row.className = `bg-gray-800 border ${isVoid ? 'border-gray-700/30 opacity-50' : 'border-gray-700/60'} rounded-2xl p-4 shadow-sm flex flex-col relative overflow-hidden group mb-3`;
+      
       row.innerHTML = `
-        <div class="flex-1">
-          <p class="font-semibold text-gray-800">${item.description} ${isVoid ? '(VOIDED)' : ''}</p>
-          <p class="text-sm text-gray-500">${item.user} &bull; ${new Date(item.date).toLocaleDateString()}</p>
-        </div>
-        <div class="text-right flex items-center gap-4">
-          <span class="font-bold ${amountColor}">${sign}${parseFloat(item.amount).toFixed(2)}</span>
-          <button 
-            class="void-btn text-xs font-semibold px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed" 
-            data-id="${item.transactionId}"
-            ${isVoid ? 'disabled' : ''}>
-            ${isVoid ? 'Voided' : 'Void'}
-          </button>
-        </div>
+          ${!isVoid ? `<div class="absolute left-0 top-0 bottom-0 w-1.5 ${isDeposit ? 'bg-emerald-500' : 'bg-rose-500'}"></div>` : ''}
+          <div class="flex justify-between items-start ml-2">
+              <div class="flex flex-col">
+                  <span class="text-white font-bold text-base">${item.description} ${isVoid ? '(VOID)' : ''}</span>
+                  <span class="text-xs text-gray-400 mt-0.5">${item.user} &bull; ${formattedDate}</span>
+              </div>
+              <span class="text-lg font-extrabold ${amountColor} ml-3 whitespace-nowrap">${sign} ${parseFloat(item.amount).toFixed(2)}</span>
+          </div>
+          <div class="flex justify-end border-t border-gray-700/50 pt-3 mt-3 ml-2">
+              <button class="void-btn text-xs font-semibold text-gray-500 hover:text-rose-400 bg-gray-900 border border-gray-700 hover:border-rose-500/50 rounded-lg px-4 py-2 transition-all active:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed" 
+              data-id="${item.id}" ${isVoid ? 'disabled' : ''}>
+                  ${isVoid ? 'Already Voided' : 'Void Transaction'}
+              </button>
+          </div>
       `;
       historyContainer.appendChild(row);
     });
@@ -300,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const payload = {
         action: 'void',
         transactionId: transactionId,
-        user: currentUser // Optional: Good for logging who voided it on backend
+        user: currentUser // Good for logging who voided it on the backend
       };
 
       try {
