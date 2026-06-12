@@ -11,7 +11,7 @@ const APP_CONFIG = {
   users: {
     "Ayman": "3009",
     "Sakr": "3009",
-    "El3taby": "154208", 
+    "El3taby": "2008", 
     "S3od": "3009"
   }
 };
