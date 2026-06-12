@@ -10,8 +10,8 @@ const APP_CONFIG = {
   scriptUrl: 'https://script.google.com/macros/s/AKfycbz9q1WjOBA4csr-opiXVDJVEN2Ny4h63cNn_9KaHGB4PalUy-wBE0IzPUn9MxUrnUeY/exec', 
   users: {
     "Ayman": "3009",
-    "Sakr": "2704",
-    "El3taby": "2008", 
+    "Sakr": "2310",
+    "El3taby": "2004", 
     "S3od": "3009"
   }
 };
@@ -144,13 +144,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Zero-Click PIN Submission
   pinInput.addEventListener('input', async (e) => {
-    // If they typed 4 digits for anyone BUT El3taby, OR 6 digits for El3taby
-    const requiredLength = selectedUserForLogin === 'El3taby' ? 6 : 4;
+    // Dynamically check the required length based on the specific user's configured PIN
+    const expectedPin = APP_CONFIG.users[selectedUserForLogin];
+    const requiredLength = expectedPin.length;
 
     if (e.target.value.length === requiredLength) {
       const enteredPin = e.target.value;
       
-      if (APP_CONFIG.users[selectedUserForLogin] !== enteredPin) {
+      if (expectedPin !== enteredPin) {
           pinInput.value = '';
           return showNotification("Invalid PIN.", true);
       }
@@ -206,8 +207,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const descVal = descInput.value.trim();
 
     if (isNaN(amountVal) || amountVal <= 0) return showNotification("Enter a valid amount.", true);
-    if (!descVal) return showNotification("Description needed.", true);
+    
+    // Description is ONLY strictly required for withdrawals
+    if (type === 'OUT' && !descVal) return showNotification("Description needed for withdrawals.", true);
     if (type === 'OUT' && amountVal > currentBalance) return showNotification("Insufficient funds.", true);
+
+    // Provide a clean default description for deposits if left blank
+    const finalDesc = descVal || (type === 'IN' ? 'Deposit' : 'Withdrawal');
 
     const originalHtml = btnElement.innerHTML;
     btnElement.disabled = true;
@@ -216,7 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       await apiCall({ 
         method: 'POST', 
-        payload: { action: 'add', user: currentUser, type: type, amount: amountVal, description: descVal } 
+        payload: { action: 'add', user: currentUser, type: type, amount: amountVal, description: finalDesc } 
       });
       amountInput.value = ''; descInput.value = '';
       await fetchDashboardData();
