@@ -12,7 +12,7 @@ const APP_CONFIG = {
   users: {
     "Ayman": "3009",
     "Sakr": "3009",
-    "El3taby": "154208", // Fixed: Added missing comma
+    "El3taby": "154208", 
     "S3od": "3009"
   }
 };
@@ -47,28 +47,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const notificationArea = document.getElementById('notification-area');
 
   // ==========================================
-  // 2. Robust Error Handling & Notifications
+  // 2. Formatters & Helpers
+  // ==========================================
+  
+  // Formats numbers to look like proper currency (e.g., 1,500.00)
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-EG', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    }).format(amount);
+  };
+
+  // SVG Spinner for loading states
+  const spinnerSvg = `<svg class="animate-spin h-5 w-5 mr-2 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+  // ==========================================
+  // 3. Robust Error Handling & Notifications
   // ==========================================
   let notificationTimeout;
   
   function showNotification(message, isError = true) {
-    // Clear any existing timeout to avoid premature hiding
     clearTimeout(notificationTimeout);
     
-    // Set message and base styles
     notificationArea.textContent = message;
     notificationArea.classList.remove('hidden');
     
-    // Adjust colors based on success/error state (Assuming Tailwind classes)
     if (isError) {
-      notificationArea.classList.add('bg-red-100', 'text-red-700', 'border-red-400');
-      notificationArea.classList.remove('bg-green-100', 'text-green-700', 'border-green-400');
+      notificationArea.classList.add('bg-rose-100', 'text-rose-700', 'border-rose-400');
+      notificationArea.classList.remove('bg-emerald-100', 'text-emerald-700', 'border-emerald-400');
     } else {
-      notificationArea.classList.add('bg-green-100', 'text-green-700', 'border-green-400');
-      notificationArea.classList.remove('bg-red-100', 'text-red-700', 'border-red-400');
+      notificationArea.classList.add('bg-emerald-100', 'text-emerald-700', 'border-emerald-400');
+      notificationArea.classList.remove('bg-rose-100', 'text-rose-700', 'border-rose-400');
     }
 
-    // Auto-hide after 4 seconds
     notificationTimeout = setTimeout(() => {
       notificationArea.classList.add('hidden');
       notificationArea.textContent = '';
@@ -82,18 +93,14 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const fetchConfig = {
         method: options.method || 'GET',
-        // CRUCIAL: Follow redirects silently to handle Google Apps Script CORS behavior
         redirect: 'follow', 
       };
 
       if (options.method === 'POST') {
-        // Text/plain content type helps bypass complex CORS preflight issues in standard Apps Script setups
-        // while still allowing the backend to parse the JSON string payload.
         fetchConfig.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
         fetchConfig.body = JSON.stringify(options.payload);
       }
 
-      // If GET request, we usually append query parameters. Assuming default Apps Script behavior.
       const url = options.method === 'GET' 
         ? `${APP_CONFIG.scriptUrl}?action=get` 
         : APP_CONFIG.scriptUrl;
@@ -101,97 +108,98 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(url, fetchConfig);
       
       if (!response.ok) {
-        throw new Error(`Network response was not ok. Status: ${response.status}`);
+        throw new Error(`Network error: ${response.status}`);
       }
 
       const data = await response.json();
 
-      // Check for explicit backend application errors
       if (data.status === 'error') {
-        throw new Error(data.message || 'An error occurred on the server.');
+        throw new Error(data.message || 'Server error occurred.');
       }
 
       return data;
 
     } catch (error) {
       showNotification(error.message || "Failed to communicate with the server.", true);
-      throw error; // Re-throw to prevent subsequent dependent code from executing
+      throw error; 
     }
   }
 
-  // Fetch initial data function
   async function fetchDashboardData() {
-    try {
-      const data = await apiCall({ method: 'GET' });
-      // Fixed: Mapped correctly to the Apps Script output (currentBalance and transactions)
-      currentBalance = parseFloat(data.data.currentBalance) || 0;
-      renderDashboard(currentBalance, data.data.transactions || []);
-    } catch (error) {
-      // Error is already handled by apiCall's catch block
-      console.error("Dashboard fetch failed:", error);
-    }
+    const data = await apiCall({ method: 'GET' });
+    currentBalance = parseFloat(data.data.currentBalance) || 0;
+    renderDashboard(currentBalance, data.data.transactions || []);
   }
 
   // ==========================================
-  // 3. Authentication
+  // 5. Authentication
   // ==========================================
-  loginBtn.addEventListener('click', (e) => {
+  loginBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     
     const selectedUser = userDropdown.value;
     const enteredPin = pinInput.value;
 
-    if (!selectedUser) {
-      return showNotification("Please select a user.", true);
-    }
-    
+    if (!selectedUser) return showNotification("Please select a user.", true);
     if (APP_CONFIG.users[selectedUser] !== enteredPin) {
-      return showNotification("Invalid PIN. Please try again.", true);
+        pinInput.value = ''; // Auto clear on fail
+        return showNotification("Invalid PIN. Please try again.", true);
     }
 
-    // Login successful
-    currentUser = selectedUser;
-    pinInput.value = ''; // clear PIN for security
-    
-    // Switch views
-    loginView.classList.add('hidden');
-    dashboardView.classList.remove('hidden');
-    
-    // Update logged-in user display in the UI (Optional but good practice if you have the ID)
-    const loggedInUserDisplay = document.getElementById('logged-in-user');
-    if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUser;
+    // --- Prevent double clicks during login ---
+    const originalText = loginBtn.textContent;
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = `${spinnerSvg} Logging in...`;
 
-    showNotification(`Welcome, ${currentUser}!`, false);
-    
-    // Fetch user dashboard data
-    fetchDashboardData();
+    try {
+      currentUser = selectedUser;
+      pinInput.value = ''; 
+      
+      // Fetch data BEFORE showing dashboard for a seamless UX
+      await fetchDashboardData();
+      
+      loginView.classList.add('hidden');
+      dashboardView.classList.remove('hidden');
+      
+      const loggedInUserDisplay = document.getElementById('logged-in-user');
+      if (loggedInUserDisplay) loggedInUserDisplay.textContent = currentUser;
+
+      showNotification(`Welcome, ${currentUser}!`, false);
+      
+      // Auto-focus amount input for convenience
+      setTimeout(() => amountInput.focus(), 100);
+
+    } catch (error) {
+       // Error handled by apiCall, but we reset login state
+       currentUser = null;
+    } finally {
+      // Re-enable button
+      loginBtn.disabled = false;
+      loginBtn.textContent = originalText;
+    }
   });
 
-  // Logout
   logoutBtn.addEventListener('click', (e) => {
     e.preventDefault();
     currentUser = null;
     currentBalance = 0;
     
-    // Clear inputs and history
     amountInput.value = '';
     descInput.value = '';
     historyContainer.innerHTML = '';
     currentBalanceDisplay.textContent = '0.00';
     
-    // Switch views
     dashboardView.classList.add('hidden');
     loginView.classList.remove('hidden');
     
-    // Reset dropdown to default
     userDropdown.selectedIndex = 0;
     showNotification("Logged out successfully.", false);
   });
 
   // ==========================================
-  // 5. Client-Side Validation & Transaction Logic
+  // 6. Client-Side Validation & Transaction Logic
   // ==========================================
-  async function handleTransaction(type) {
+  async function handleTransaction(type, btnElement) {
     const amountVal = parseFloat(amountInput.value);
     const descVal = descInput.value.trim();
 
@@ -202,16 +210,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!descVal) {
       return showNotification("Description cannot be empty.", true);
     }
-
-    // Withdraw specific validation
     if (type === 'OUT' && amountVal > currentBalance) {
       return showNotification("Insufficient funds in the safe.", true);
     }
 
+    // --- Prevent double clicks during transaction ---
+    const originalHtml = btnElement.innerHTML;
+    btnElement.disabled = true;
+    btnElement.innerHTML = `${spinnerSvg} Processing...`;
+
     const payload = {
       action: 'add',
       user: currentUser,
-      type: type, // 'IN' or 'OUT'
+      type: type, 
       amount: amountVal,
       description: descVal
     };
@@ -220,35 +231,39 @@ document.addEventListener("DOMContentLoaded", () => {
       await apiCall({ method: 'POST', payload: payload });
       showNotification("Transaction successful!", false);
       
-      // Clear inputs
+      // Clear inputs only on success
       amountInput.value = '';
       descInput.value = '';
       
-      // Re-fetch to get updated state from truth (backend)
-      fetchDashboardData();
+      // Update data
+      await fetchDashboardData();
     } catch (error) {
-      // Error handled by apiCall
+      // Handled by apiCall
+    } finally {
+      // Always re-enable the button
+      btnElement.disabled = false;
+      btnElement.innerHTML = originalHtml;
     }
   }
 
+  // Pass the button element to the handler so we can disable it
   btnDeposit.addEventListener('click', (e) => {
     e.preventDefault();
-    handleTransaction('IN');
+    handleTransaction('IN', btnDeposit);
   });
 
   btnWithdraw.addEventListener('click', (e) => {
     e.preventDefault();
-    handleTransaction('OUT');
+    handleTransaction('OUT', btnWithdraw);
   });
 
   // ==========================================
-  // 6. Dynamic Rendering
+  // 7. Dynamic Rendering
   // ==========================================
   function renderDashboard(balance, history) {
-    // Update balance text
-    currentBalanceDisplay.textContent = balance.toFixed(2);
+    // Uses the new currency formatter
+    currentBalanceDisplay.innerHTML = `<span class="text-3xl text-gray-500 font-normal mr-1">EGP</span>${formatCurrency(balance)}`;
     
-    // Clear existing history
     historyContainer.innerHTML = '';
 
     if (history.length === 0) {
@@ -256,7 +271,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Fixed: Custom dark-mode UI styling injected here
     history.forEach(item => {
       const isVoid = item.type === 'VOID';
       const isDeposit = item.type === 'IN';
@@ -266,21 +280,25 @@ document.addEventListener("DOMContentLoaded", () => {
       const formattedDate = new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
       const row = document.createElement('div');
-      row.className = `bg-gray-800 border ${isVoid ? 'border-gray-700/30 opacity-50' : 'border-gray-700/60'} rounded-2xl p-4 shadow-sm flex flex-col relative overflow-hidden group mb-3`;
+      row.className = `bg-gray-800 border ${isVoid ? 'border-gray-700/30 opacity-50' : 'border-gray-700/60'} rounded-2xl p-4 shadow-sm flex flex-col relative overflow-hidden group flex-shrink-0`;
       
+      // Added matching SVG to the void button dynamically
       row.innerHTML = `
           ${!isVoid ? `<div class="absolute left-0 top-0 bottom-0 w-1.5 ${isDeposit ? 'bg-emerald-500' : 'bg-rose-500'}"></div>` : ''}
           <div class="flex justify-between items-start ml-2">
               <div class="flex flex-col">
                   <span class="text-white font-bold text-base">${item.description} ${isVoid ? '(VOID)' : ''}</span>
-                  <span class="text-xs text-gray-400 mt-0.5">${item.user} &bull; ${formattedDate}</span>
+                  <span class="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                      ${item.user} &bull; ${formattedDate}
+                  </span>
               </div>
-              <span class="text-lg font-extrabold ${amountColor} ml-3 whitespace-nowrap">${sign} ${parseFloat(item.amount).toFixed(2)}</span>
+              <span class="text-lg font-extrabold ${amountColor} ml-3 whitespace-nowrap">${sign} ${formatCurrency(item.amount)}</span>
           </div>
           <div class="flex justify-end border-t border-gray-700/50 pt-3 mt-3 ml-2">
-              <button class="void-btn text-xs font-semibold text-gray-500 hover:text-rose-400 bg-gray-900 border border-gray-700 hover:border-rose-500/50 rounded-lg px-4 py-2 transition-all active:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed" 
+              <button class="void-btn text-xs font-semibold text-gray-500 hover:text-rose-400 bg-gray-900 border border-gray-700 hover:border-rose-500/50 rounded-lg px-4 py-2 transition-all active:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5" 
               data-id="${item.id}" ${isVoid ? 'disabled' : ''}>
-                  ${isVoid ? 'Already Voided' : 'Void Transaction'}
+                  ${isVoid ? 'Already Voided' : `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Void Transaction`}
               </button>
           </div>
       `;
@@ -289,33 +307,42 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // 7. Void Confirmation & Action (Event Delegation)
+  // 8. Void Confirmation & Action (Event Delegation)
   // ==========================================
   historyContainer.addEventListener('click', async (e) => {
-    // Check if clicked element is a void button
-    if (e.target.classList.contains('void-btn')) {
+    // Fix: Use closest() in case they click the SVG inside the button
+    const voidBtn = e.target.closest('.void-btn');
+    
+    if (voidBtn) {
       e.preventDefault();
+      if (voidBtn.disabled) return; // Prevent action if already processing/voided
       
-      const transactionId = e.target.getAttribute('data-id');
+      const transactionId = voidBtn.getAttribute('data-id');
       
-      // Native confirmation before voiding
       if (!confirm("Are you sure you want to void this transaction? This cannot be undone.")) {
         return; 
       }
 
+      // --- Prevent double clicking void ---
+      const originalHtml = voidBtn.innerHTML;
+      voidBtn.disabled = true;
+      voidBtn.innerHTML = `${spinnerSvg} Voiding...`;
+
       const payload = {
         action: 'void',
         transactionId: transactionId,
-        user: currentUser // Good for logging who voided it on the backend
+        user: currentUser 
       };
 
       try {
         await apiCall({ method: 'POST', payload: payload });
         showNotification("Transaction voided successfully.", false);
-        // Re-fetch to update history list and balance
-        fetchDashboardData(); 
+        await fetchDashboardData(); 
       } catch (error) {
-        // Error handled in apiCall
+        // If it fails, revert the button back so they can try again.
+        // (If it succeeds, renderDashboard entirely rebuilds the button list anyway)
+        voidBtn.disabled = false;
+        voidBtn.innerHTML = originalHtml;
       }
     }
   });
