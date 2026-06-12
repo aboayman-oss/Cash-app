@@ -1,288 +1,317 @@
-// ==========================================
-// CONFIGURATION & AUTH
-// ==========================================
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynuRCSOcUeIeMPYtgoWnkcDYpf9O2IW__DCeMO2Tz3dF6q-jTh7Aqxu0VQDLM1bUq76A/exec';
-
-// Phase 4: PINs live in JS (acceptable for trusted roommates)
-const ROOMMATES = {
-  "Ayman": "3009",
-  "Sakr": "3009",
-  "El3taby": "154208",
-  "S3od": "3009"
-};
+/**
+ * Shared Cash Safe Application
+ * Vanilla JS App for interacting with Google Apps Script backend.
+ */
 
 // ==========================================
-// STATE
+// 1. Centralized Configuration & Globals
 // ==========================================
-let state = {
-  user: null,
-  balance: 0.00,
-  history: []
-};
-
-// ==========================================
-// DOM ELEMENTS
-// ==========================================
-const els = {
-  loader: document.getElementById('loader'),
-  loginView: document.getElementById('login-view'),
-  dashView: document.getElementById('dashboard-view'),
-  
-  // Login
-  loginForm: document.getElementById('login-form'),
-  loginUser: document.getElementById('login-user'),
-  loginPin: document.getElementById('login-pin'),
-  loginError: document.getElementById('login-error'),
-  
-  // Dashboard
-  currentUserName: document.getElementById('current-user-name'),
-  displayBalance: document.getElementById('display-balance'),
-  historyList: document.getElementById('history-list'),
-  btnLogout: document.getElementById('btn-logout'),
-  
-  // Transaction Buttons
-  btnDeposit: document.getElementById('btn-deposit'),
-  btnWithdraw: document.getElementById('btn-withdraw'),
-  
-  // Modal
-  txModal: document.getElementById('tx-modal'),
-  btnCloseModal: document.getElementById('btn-close-modal'),
-  txForm: document.getElementById('tx-form'),
-  txType: document.getElementById('tx-type'),
-  txAmount: document.getElementById('tx-amount'),
-  txDesc: document.getElementById('tx-desc'),
-  txError: document.getElementById('tx-error'),
-  txModalTitle: document.getElementById('tx-modal-title'),
-  txSubmitBtn: document.getElementById('tx-submit-btn')
-};
-
-// ==========================================
-// AUTH & VIEW ROUTING (Phase 2)
-// ==========================================
-els.loginForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const user = els.loginUser.value;
-  const pin = els.loginPin.value;
-
-  if (!user || ROOMMATES[user] !== pin) {
-    els.loginError.classList.remove('hidden');
-    return;
+const APP_CONFIG = {
+  // Replace with your deployed Google Apps Script Web App URL
+  scriptUrl: 'https://script.google.com/macros/s/AKfycbxqhKwQddxQmdheO4bhzcBOOOVdUYQ-9qoTim-X4bqOLzTCXkcMOxx8NyTMHOeer7_D/exec', 
+  users: {
+    "Ayman": "3009",
+    "Sakr": "3009",
+    "El3taby": "154208"
+    "S3od": "3009"
   }
+};
 
-  els.loginError.classList.add('hidden');
-  state.user = user;
-  els.currentUserName.textContent = user;
-  els.loginPin.value = ''; // clear for next time
-  
-  // Navigate to Dashboard and Fetch Data
-  els.loginView.classList.add('hidden');
-  els.dashView.classList.remove('hidden');
-  els.dashView.classList.add('flex');
-  
-  fetchSafeData();
-});
-
-els.btnLogout.addEventListener('click', () => {
-  state.user = null;
-  els.dashView.classList.add('hidden');
-  els.dashView.classList.remove('flex');
-  els.loginView.classList.remove('hidden');
-});
+// Global application state
+let currentUser = null;
+let currentBalance = 0;
 
 // ==========================================
-// API INTEGRATION (Phase 3)
+// DOM Element References
 // ==========================================
-
-// Helper: Standard Fetch wrapper avoiding CORS preflight via text/plain
-async function safeFetch(method, payload = null) {
-  els.loader.classList.remove('hidden');
+document.addEventListener("DOMContentLoaded", () => {
+  // Views
+  const loginView = document.getElementById('login-view');
+  const dashboardView = document.getElementById('dashboard-view');
   
-  try {
-    const options = {
-      method: method,
-      redirect: 'follow', // Crucial for Apps Script CORS fix
-    };
+  // Inputs
+  const userDropdown = document.getElementById('user-dropdown');
+  const pinInput = document.getElementById('pin-input');
+  const amountInput = document.getElementById('amount-input');
+  const descInput = document.getElementById('desc-input');
+  
+  // Buttons
+  const loginBtn = document.getElementById('login-btn');
+  const btnDeposit = document.getElementById('btn-deposit');
+  const btnWithdraw = document.getElementById('btn-withdraw');
+  const logoutBtn = document.getElementById('logout-btn');
+  
+  // Displays
+  const currentBalanceDisplay = document.getElementById('current-balance');
+  const historyContainer = document.getElementById('history-container');
+  const notificationArea = document.getElementById('notification-area');
 
-    if (payload) {
-      // Sending as text/plain prevents strict CORS preflights from failing
-      options.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
-      options.body = JSON.stringify(payload);
+  // ==========================================
+  // 2. Robust Error Handling & Notifications
+  // ==========================================
+  let notificationTimeout;
+  
+  function showNotification(message, isError = true) {
+    // Clear any existing timeout to avoid premature hiding
+    clearTimeout(notificationTimeout);
+    
+    // Set message and base styles
+    notificationArea.textContent = message;
+    notificationArea.classList.remove('hidden');
+    
+    // Adjust colors based on success/error state (Assuming Tailwind classes)
+    if (isError) {
+      notificationArea.classList.add('bg-red-100', 'text-red-700', 'border-red-400');
+      notificationArea.classList.remove('bg-green-100', 'text-green-700', 'border-green-400');
+    } else {
+      notificationArea.classList.add('bg-green-100', 'text-green-700', 'border-green-400');
+      notificationArea.classList.remove('bg-red-100', 'text-red-700', 'border-red-400');
     }
 
-    const response = await fetch(APPS_SCRIPT_URL, options);
-    const data = await response.json();
-    return data;
-
-  } catch (error) {
-    console.error("API Error:", error);
-    alert("Connection error. Check your internet or Apps Script URL.");
-    return null;
-  } finally {
-    els.loader.classList.add('hidden');
-  }
-}
-
-// 1. GET: Fetch Balance + History
-async function fetchSafeData() {
-  const data = await safeFetch('GET');
-  if (data) {
-    state.balance = Number(data.balance);
-    state.history = data.history || [];
-    renderDashboard();
-  }
-}
-
-// 2. POST: Add Transaction
-async function submitTransaction(type, amount, description) {
-  const payload = {
-    action: 'add',
-    user: state.user,
-    type: type,
-    amount: amount,
-    description: description
-  };
-
-  const data = await safeFetch('POST', payload);
-  if (data && data.success) {
-    closeModal();
-    fetchSafeData(); // Re-fetch to guarantee sync with Sheets
-  } else {
-    showTxError(data?.error || "Failed to save transaction.");
-  }
-}
-
-// 3. POST: Void Transaction
-async function voidTransaction(transactionId) {
-  const payload = {
-    action: 'void',
-    user: state.user,
-    id: transactionId
-  };
-
-  const data = await safeFetch('POST', payload);
-  if (data && data.success) {
-    fetchSafeData(); // Re-fetch to recalculate balance and display void row
-  } else {
-    alert(data?.error || "Failed to void transaction.");
-  }
-}
-
-// ==========================================
-// UI RENDERING & VALIDATION (Phase 2 & 4)
-// ==========================================
-
-function renderDashboard() {
-  els.displayBalance.textContent = state.balance.toFixed(2);
-  els.historyList.innerHTML = '';
-
-  if (state.history.length === 0) {
-    els.historyList.innerHTML = `<p class="text-center text-gray-400 mt-6 text-sm">No transactions yet.</p>`;
-    return;
+    // Auto-hide after 4 seconds
+    notificationTimeout = setTimeout(() => {
+      notificationArea.classList.add('hidden');
+      notificationArea.textContent = '';
+    }, 4000);
   }
 
-  state.history.forEach(tx => {
-    // Phase 4: Void button logic
-    const isVoid = tx.type === 'VOID';
-    const isOut = tx.type === 'OUT';
-    
-    const amountColor = isVoid ? 'text-gray-500 line-through' : (isOut ? 'text-red-600' : 'text-green-600');
-    const amountPrefix = isOut || isVoid ? '-' : '+';
-    
-    const row = document.createElement('div');
-    row.className = `bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center ${isVoid ? 'opacity-60' : ''}`;
-    
-    row.innerHTML = `
-      <div class="flex-1">
-        <div class="flex items-center gap-2">
-          <span class="font-bold text-gray-800 text-sm">${tx.user}</span>
-          <span class="text-xs text-gray-400 font-medium">${new Date(tx.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
-          ${isVoid ? `<span class="bg-gray-200 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-sm">VOID</span>` : ''}
-        </div>
-        <p class="text-sm text-gray-600 mt-0.5">${tx.description}</p>
-      </div>
-      <div class="flex flex-col items-end pl-4">
-        <span class="font-bold ${amountColor}">
-          ${amountPrefix}$${Math.abs(tx.amount).toFixed(2)}
-        </span>
-        <button class="void-btn mt-1 text-xs font-bold text-red-400 hover:text-red-600 transition disabled:opacity-0" 
-          data-id="${tx.id}" ${isVoid ? 'disabled' : ''}>
-          VOID
-        </button>
-      </div>
-    `;
-    
-    els.historyList.appendChild(row);
-  });
+  // ==========================================
+  // 4. API Communication Helper
+  // ==========================================
+  async function apiCall(options = {}) {
+    try {
+      const fetchConfig = {
+        method: options.method || 'GET',
+        // CRUCIAL: Follow redirects silently to handle Google Apps Script CORS behavior
+        redirect: 'follow', 
+      };
 
-  // Attach event listeners to new Void buttons
-  document.querySelectorAll('.void-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const txId = e.target.getAttribute('data-id');
-      // Phase 2: Confirmation Prompt
-      if (confirm("Are you sure you want to void this transaction? This will automatically offset the balance.")) {
-        voidTransaction(txId);
+      if (options.method === 'POST') {
+        // Text/plain content type helps bypass complex CORS preflight issues in standard Apps Script setups
+        // while still allowing the backend to parse the JSON string payload.
+        fetchConfig.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+        fetchConfig.body = JSON.stringify(options.payload);
       }
-    });
+
+      // If GET request, we usually append query parameters. Assuming default Apps Script behavior.
+      const url = options.method === 'GET' 
+        ? `${APP_CONFIG.scriptUrl}?action=get` 
+        : APP_CONFIG.scriptUrl;
+
+      const response = await fetch(url, fetchConfig);
+      
+      if (!response.ok) {
+        throw new Error(`Network response was not ok. Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Check for explicit backend application errors
+      if (data.status === 'error') {
+        throw new Error(data.message || 'An error occurred on the server.');
+      }
+
+      return data;
+
+    } catch (error) {
+      showNotification(error.message || "Failed to communicate with the server.", true);
+      throw error; // Re-throw to prevent subsequent dependent code from executing
+    }
+  }
+
+  // Fetch initial data function
+  async function fetchDashboardData() {
+    try {
+      const data = await apiCall({ method: 'GET' });
+      // Assuming backend returns { status: 'success', data: { balance: 100, history: [...] } }
+      currentBalance = parseFloat(data.data.balance) || 0;
+      renderDashboard(currentBalance, data.data.history || []);
+    } catch (error) {
+      // Error is already handled by apiCall's catch block
+      console.error("Dashboard fetch failed:", error);
+    }
+  }
+
+  // ==========================================
+  // 3. Authentication
+  // ==========================================
+  loginBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    const selectedUser = userDropdown.value;
+    const enteredPin = pinInput.value;
+
+    if (!selectedUser) {
+      return showNotification("Please select a user.", true);
+    }
+    
+    if (APP_CONFIG.users[selectedUser] !== enteredPin) {
+      return showNotification("Invalid PIN. Please try again.", true);
+    }
+
+    // Login successful
+    currentUser = selectedUser;
+    pinInput.value = ''; // clear PIN for security
+    
+    // Switch views
+    loginView.classList.add('hidden');
+    dashboardView.classList.remove('hidden');
+    
+    showNotification(`Welcome, ${currentUser}!`, false);
+    
+    // Fetch user dashboard data
+    fetchDashboardData();
   });
-}
 
-// ==========================================
-// MODAL LOGIC & FORM VALIDATION (Phase 4)
-// ==========================================
+  // Logout
+  logoutBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    currentUser = null;
+    currentBalance = 0;
+    
+    // Clear inputs and history
+    amountInput.value = '';
+    descInput.value = '';
+    historyContainer.innerHTML = '';
+    currentBalanceDisplay.textContent = '0';
+    
+    // Switch views
+    dashboardView.classList.add('hidden');
+    loginView.classList.remove('hidden');
+    showNotification("Logged out successfully.", false);
+  });
 
-function openModal(type) {
-  els.txType.value = type;
-  els.txAmount.value = '';
-  els.txDesc.value = '';
-  els.txError.classList.add('hidden');
-  
-  if (type === 'IN') {
-    els.txModalTitle.textContent = 'Add Deposit';
-    els.txSubmitBtn.className = "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition shadow-md mt-2";
-  } else {
-    els.txModalTitle.textContent = 'Withdraw Funds';
-    els.txSubmitBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl transition shadow-md mt-2";
+  // ==========================================
+  // 5. Client-Side Validation & Transaction Logic
+  // ==========================================
+  async function handleTransaction(type) {
+    const amountVal = parseFloat(amountInput.value);
+    const descVal = descInput.value.trim();
+
+    // Validations
+    if (isNaN(amountVal) || amountVal <= 0) {
+      return showNotification("Please enter a valid amount greater than 0.", true);
+    }
+    if (!descVal) {
+      return showNotification("Description cannot be empty.", true);
+    }
+
+    // Withdraw specific validation
+    if (type === 'OUT' && amountVal > currentBalance) {
+      return showNotification("Insufficient funds in the safe.", true);
+    }
+
+    const payload = {
+      action: 'add',
+      user: currentUser,
+      type: type, // 'IN' or 'OUT'
+      amount: amountVal,
+      description: descVal
+    };
+
+    try {
+      await apiCall({ method: 'POST', payload: payload });
+      showNotification("Transaction successful!", false);
+      
+      // Clear inputs
+      amountInput.value = '';
+      descInput.value = '';
+      
+      // Re-fetch to get updated state from truth (backend)
+      fetchDashboardData();
+    } catch (error) {
+      // Error handled by apiCall
+    }
   }
 
-  els.txModal.classList.remove('hidden');
-}
+  btnDeposit.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleTransaction('IN');
+  });
 
-function closeModal() {
-  els.txModal.classList.add('hidden');
-}
+  btnWithdraw.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleTransaction('OUT');
+  });
 
-function showTxError(msg) {
-  els.txError.textContent = msg;
-  els.txError.classList.remove('hidden');
-}
+  // ==========================================
+  // 6. Dynamic Rendering
+  // ==========================================
+  function renderDashboard(balance, history) {
+    // Update balance text
+    currentBalanceDisplay.textContent = balance.toFixed(2);
+    
+    // Clear existing history
+    historyContainer.innerHTML = '';
 
-// Open modal bindings
-els.btnDeposit.addEventListener('click', () => openModal('IN'));
-els.btnWithdraw.addEventListener('click', () => openModal('OUT'));
-els.btnCloseModal.addEventListener('click', closeModal);
+    if (history.length === 0) {
+      historyContainer.innerHTML = '<p class="text-gray-500 italic p-4 text-center">No transactions found.</p>';
+      return;
+    }
 
-// Form submission & Validation
-els.txForm.addEventListener('submit', (e) => {
-  e.preventDefault(); // Phase 3: No page reload
-  
-  const type = els.txType.value;
-  const amount = Number(els.txAmount.value);
-  const desc = els.txDesc.value.trim();
+    // Build history UI
+    history.forEach(item => {
+      const isVoid = item.type === 'VOID';
+      
+      // Create wrapper div
+      const row = document.createElement('div');
+      row.className = `flex justify-between items-center p-3 border-b border-gray-200 ${isVoid ? 'bg-gray-100 opacity-60' : 'bg-white'}`;
+      
+      // Format transaction type and sign
+      const isDeposit = item.type === 'IN';
+      const amountColor = isDeposit ? 'text-green-600' : (isVoid ? 'text-gray-500' : 'text-red-600');
+      const sign = isDeposit ? '+' : (isVoid ? '' : '-');
 
-  // Phase 4 Validations
-  if (!amount || amount <= 0) {
-    showTxError("Amount must be greater than 0.");
-    return;
+      // HTML template for the row
+      row.innerHTML = `
+        <div class="flex-1">
+          <p class="font-semibold text-gray-800">${item.description} ${isVoid ? '(VOIDED)' : ''}</p>
+          <p class="text-sm text-gray-500">${item.user} &bull; ${new Date(item.date).toLocaleDateString()}</p>
+        </div>
+        <div class="text-right flex items-center gap-4">
+          <span class="font-bold ${amountColor}">${sign}${parseFloat(item.amount).toFixed(2)}</span>
+          <button 
+            class="void-btn text-xs font-semibold px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed" 
+            data-id="${item.transactionId}"
+            ${isVoid ? 'disabled' : ''}>
+            ${isVoid ? 'Voided' : 'Void'}
+          </button>
+        </div>
+      `;
+      historyContainer.appendChild(row);
+    });
   }
-  if (!desc) {
-    showTxError("Description cannot be empty.");
-    return;
-  }
-  if (type === 'OUT' && amount > state.balance) {
-    showTxError(`Insufficient funds. Max withdrawal is $${state.balance.toFixed(2)}.`);
-    return;
-  }
 
-  els.txError.classList.add('hidden');
-  submitTransaction(type, amount, desc);
+  // ==========================================
+  // 7. Void Confirmation & Action (Event Delegation)
+  // ==========================================
+  historyContainer.addEventListener('click', async (e) => {
+    // Check if clicked element is a void button
+    if (e.target.classList.contains('void-btn')) {
+      e.preventDefault();
+      
+      const transactionId = e.target.getAttribute('data-id');
+      
+      // Native confirmation before voiding
+      if (!confirm("Are you sure you want to void this transaction? This cannot be undone.")) {
+        return; 
+      }
+
+      const payload = {
+        action: 'void',
+        transactionId: transactionId,
+        user: currentUser // Optional: Good for logging who voided it on backend
+      };
+
+      try {
+        await apiCall({ method: 'POST', payload: payload });
+        showNotification("Transaction voided successfully.", false);
+        // Re-fetch to update history list and balance
+        fetchDashboardData(); 
+      } catch (error) {
+        // Error handled in apiCall
+      }
+    }
+  });
+
 });
