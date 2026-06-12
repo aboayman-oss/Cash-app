@@ -10,7 +10,7 @@ const APP_CONFIG = {
   scriptUrl: 'https://script.google.com/macros/s/AKfycbz9q1WjOBA4csr-opiXVDJVEN2Ny4h63cNn_9KaHGB4PalUy-wBE0IzPUn9MxUrnUeY/exec', 
   users: {
     "Ayman": "3009",
-    "Sakr": "3009",
+    "Sakr": "2704",
     "El3taby": "2008", 
     "S3od": "3009"
   }
