@@ -1,13 +1,14 @@
 // ==========================================
 // CONFIGURATION & AUTH
 // ==========================================
-const APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynuRCSOcUeIeMPYtgoWnkcDYpf9O2IW__DCeMO2Tz3dF6q-jTh7Aqxu0VQDLM1bUq76A/exec';
 
 // Phase 4: PINs live in JS (acceptable for trusted roommates)
 const ROOMMATES = {
-  "Ahmed": "1111",
-  "Mohamed": "2222",
-  "Ali": "3333"
+  "Ayman": "3009",
+  "Sakr": "3009",
+  "El3taby": "154208",
+  "S3od": "3009"
 };
 
 // ==========================================
