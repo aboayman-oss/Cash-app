@@ -8,7 +8,7 @@
 // ==========================================
 const APP_CONFIG = {
   // Replace with your deployed Google Apps Script Web App URL
-  scriptUrl: 'https://script.google.com/macros/s/AKfycbxqhKwQddxQmdheO4bhzcBOOOVdUYQ-9qoTim-X4bqOLzTCXkcMOxx8NyTMHOeer7_D/exec', 
+  scriptUrl: 'https://script.google.com/macros/s/AKfycbz9q1WjOBA4csr-opiXVDJVEN2Ny4h63cNn_9KaHGB4PalUy-wBE0IzPUn9MxUrnUeY/exec', 
   users: {
     "Ayman": "3009",
     "Sakr": "3009",
