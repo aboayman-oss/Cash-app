@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Safe Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans antialiased flex justify-center h-screen w-screen overflow-hidden">
+
+  <div class="w-full max-w-md bg-white shadow-xl h-full flex flex-col relative">
+
+    <div id="loader" class="hidden absolute inset-0 bg-white/80 z-50 flex flex-col justify-center items-center">
+      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <p class="mt-3 text-gray-600 font-medium text-sm">Syncing with Safe...</p>
+    </div>
+
+    <div id="login-view" class="flex flex-col flex-1 items-center justify-center p-6">
+      <div class="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mb-6 shadow-lg">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mb-8">Safe Login</h1>
+      
+      <form id="login-form" class="w-full max-w-xs space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Roommate</label>
+          <select id="login-user" class="w-full border border-gray-300 rounded-lg p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+            <option value="" disabled selected>Select user...</option>
+            <option value="Ahmed">Ahmed</option>
+            <option value="Mohamed">Mohamed</option>
+            <option value="Ali">Ali</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">PIN</label>
+          <input type="password" id="login-pin" pattern="[0-9]*" inputmode="numeric" placeholder="****" class="w-full border border-gray-300 rounded-lg p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        <div id="login-error" class="text-red-500 text-sm hidden font-medium text-center">Invalid PIN. Try again.</div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md">Enter Safe</button>
+      </form>
+    </div>
+
+    <div id="dashboard-view" class="hidden flex-col flex-1 h-full">
+      
+      <header class="bg-blue-600 text-white p-6 shadow-md rounded-b-2xl z-10">
+        <div class="flex justify-between items-center mb-4">
+          <p class="text-sm font-medium opacity-90">Logged in as <span id="current-user-name" class="font-bold underline">User</span></p>
+          <button id="btn-logout" class="text-xs bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded-full transition">Logout</button>
+        </div>
+        <p class="text-blue-100 text-sm font-medium uppercase tracking-wider mb-1">Current Balance</p>
+        <h2 class="text-5xl font-bold tracking-tight"><span class="text-blue-300 text-3xl">$</span><span id="display-balance">0.00</span></h2>
+      </header>
+
+      <div class="flex gap-4 p-4 -mt-4 z-20">
+        <button id="btn-deposit" class="flex-1 bg-white border border-gray-200 text-green-600 font-bold py-4 rounded-xl shadow-sm hover:shadow-md transition flex justify-center items-center gap-2 text-lg">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+          Deposit
+        </button>
+        <button id="btn-withdraw" class="flex-1 bg-white border border-gray-200 text-red-600 font-bold py-4 rounded-xl shadow-sm hover:shadow-md transition flex justify-center items-center gap-2 text-lg">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+          Withdraw
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 pt-0 bg-gray-50">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pl-1">Transaction History</h3>
+        <div id="history-list" class="space-y-3 pb-6">
+          </div>
+      </div>
+    </div>
+
+    <div id="tx-modal" class="hidden absolute inset-0 bg-black/60 z-40 flex flex-col justify-end">
+      <div class="bg-white rounded-t-2xl p-6 w-full animate-[slideUp_0.3s_ease-out]">
+        <div class="flex justify-between items-center mb-4">
+          <h3 id="tx-modal-title" class="text-xl font-bold text-gray-800">New Transaction</h3>
+          <button id="btn-close-modal" class="text-gray-400 hover:text-gray-600 p-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        
+        <form id="tx-form" class="space-y-4">
+          <input type="hidden" id="tx-type">
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+            <input type="number" id="tx-amount" step="0.01" min="0.01" required placeholder="0.00" class="w-full border border-gray-300 rounded-lg p-3 text-2xl font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <input type="text" id="tx-desc" required placeholder="What is this for?" class="w-full border border-gray-300 rounded-lg p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+
+          <div id="tx-error" class="hidden bg-red-50 border-l-4 border-red-500 p-3 text-sm text-red-700 font-medium"></div>
+          
+          <button type="submit" id="tx-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-md mt-2">Submit</button>
+        </form>
+      </div>
+    </div>
+    
+  </div>
+
+  <style>
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  </style>
+  <script src="app.js"></script>
+</body>
+</html>
