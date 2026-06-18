@@ -3,64 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#111827">
+    <meta name="theme-color" content="#0A0D14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Safe Manager</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
+            },
+            colors: {
+              ink: {
+                950: '#0A0D14',
+                900: '#0E1220',
+                850: '#11151F',
+                800: '#161B28',
+                700: '#1F2535',
+                600: '#2A3145',
+                500: '#3A4259'
+              },
+              accent: {
+                DEFAULT: '#3B82F6',
+                50:  '#EFF6FF',
+                100: '#DBEAFE',
+                400: '#60A5FA',
+                500: '#3B82F6',
+                600: '#2563EB',
+                700: '#1D4ED8'
+              }
+            },
+            boxShadow: {
+              'glow-blue':   '0 0 0 1px rgba(59,130,246,0.15), 0 8px 30px -8px rgba(59,130,246,0.35)',
+              'glow-emerald':'0 0 0 1px rgba(16,185,129,0.15), 0 8px 30px -8px rgba(16,185,129,0.35)',
+              'glow-rose':   '0 0 0 1px rgba(244,63,94,0.15), 0 8px 30px -8px rgba(244,63,94,0.35)',
+              'card':        '0 1px 0 0 rgba(255,255,255,0.04) inset, 0 12px 40px -12px rgba(0,0,0,0.6)'
+            }
+          }
+        }
+      };
+    </script>
+
     <style type="text/tailwindcss">
         @layer utilities {
             .no-scrollbar::-webkit-scrollbar { display: none; }
             .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+            .tabular { font-variant-numeric: tabular-nums; }
+
+            .safe-top    { padding-top:    env(safe-area-inset-top); }
+            .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+            .safe-px     { padding-left:   env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+            /* Glassmorphic surface */
+            .glass {
+              background: rgba(22, 27, 40, 0.72);
+              backdrop-filter: blur(20px) saturate(180%);
+              -webkit-backdrop-filter: blur(20px) saturate(180%);
+            }
+
+            /* Subtle inner top highlight (premium card trick) */
+            .card-hi {
+              box-shadow:
+                inset 0 1px 0 0 rgba(255,255,255,0.06),
+                0 1px 2px rgba(0,0,0,0.4),
+                0 16px 40px -16px rgba(0,0,0,0.7);
+            }
+
+            input[type="number"]::-webkit-inner-spin-button,
+            input[type="number"]::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+            input[type="number"] { -moz-appearance: textfield; }
+
+            .pin-disabled { opacity: 0.4; pointer-events: none; }
+
+            /* ============ Animations ============ */
+            @keyframes balance-flash {
+                0%   { color: #F4F6FB; transform: scale(1); }
+                35%  { color: #10B981; transform: scale(1.04); }
+                100% { color: #F4F6FB; transform: scale(1); }
+            }
+            .flash-balance { animation: balance-flash 0.9s ease-out; }
+
+            @keyframes sk-pulse {
+                0%, 100% { opacity: 1; }
+                50%      { opacity: 0.4; }
+            }
+            .skeleton { animation: sk-pulse 1.4s ease-in-out infinite; }
+
+            /* Modal transitions */
+            .modal-hidden { opacity: 0; pointer-events: none; }
+            .modal-visible { opacity: 1; pointer-events: auto; }
+            .modal-card-hidden { transform: scale(0.92) translateY(14px); opacity: 0; }
+            .modal-card-visible { transform: scale(1) translateY(0); opacity: 1; }
+
+            /* Slide-down toast */
+            .toast-hidden { transform: translateY(-120%); opacity: 0; }
+            .toast-visible { transform: translateY(0); opacity: 1; }
+
+            /* View transitions (Login <-> Dashboard) */
+            .view-enter { animation: view-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+            @keyframes view-enter {
+              from { opacity: 0; transform: translateY(8px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+
+            /* Stagger children */
+            .stagger > * { animation: stagger-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+            .stagger > *:nth-child(1) { animation-delay: 0.02s; }
+            .stagger > *:nth-child(2) { animation-delay: 0.06s; }
+            .stagger > *:nth-child(3) { animation-delay: 0.10s; }
+            .stagger > *:nth-child(4) { animation-delay: 0.14s; }
+            .stagger > *:nth-child(5) { animation-delay: 0.18s; }
+            .stagger > *:nth-child(6) { animation-delay: 0.22s; }
+            .stagger > *:nth-child(7) { animation-delay: 0.26s; }
+            .stagger > *:nth-child(8) { animation-delay: 0.30s; }
+            .stagger > *:nth-child(9) { animation-delay: 0.34s; }
+            .stagger > *:nth-child(10){ animation-delay: 0.38s; }
+            @keyframes stagger-in {
+              from { opacity: 0; transform: translateY(10px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+
+            /* PIN dot shake on error */
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              20%, 60% { transform: translateX(-6px); }
+              40%, 80% { transform: translateX(6px); }
+            }
+            .shake { animation: shake 0.4s ease-in-out; }
+
+            /* Shimmer sweep on balance card */
+            @keyframes shimmer {
+              0%   { transform: translateX(-120%); }
+              100% { transform: translateX(120%); }
+            }
+            .shimmer-sweep::after {
+              content: '';
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
+              transform: translateX(-120%);
+              pointer-events: none;
+            }
+            .shimmer-sweep.sweeping::after {
+              animation: shimmer 0.9s ease-out;
+            }
+
+            /* Ambient floating orbs */
+            @keyframes float-a {
+              0%, 100% { transform: translate(0, 0) scale(1); }
+              50%      { transform: translate(40px, -30px) scale(1.15); }
+            }
+            @keyframes float-b {
+              0%, 100% { transform: translate(0, 0) scale(1); }
+              50%      { transform: translate(-30px, 40px) scale(1.1); }
+            }
+            .orb-a { animation: float-a 18s ease-in-out infinite; }
+            .orb-b { animation: float-b 22s ease-in-out infinite; }
+
+            /* Spring pop (selected user) */
+            @keyframes pop {
+              0%   { transform: scale(1); }
+              50%  { transform: scale(1.05); }
+              100% { transform: scale(1); }
+            }
+            .pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+            /* Press feedback */
+            .press { transition: transform 0.1s ease; }
+            .press:active { transform: scale(0.96); }
+
+            /* History row swipe-to-void */
+            .history-row { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); will-change: transform; }
+            .history-row.swiped { transform: translateX(-80px); }
+            .history-row .void-action-bg {
+              position: absolute; inset: 0;
+              background: linear-gradient(90deg, transparent 60%, rgba(244,63,94,0.25) 100%);
+              display: flex; align-items: center; justify-content: flex-end;
+              padding-right: 1rem;
+            }
+
+            /* Visible focus ring */
+            .focus-ring:focus-visible {
+              outline: 2px solid #60A5FA;
+              outline-offset: 2px;
+            }
+
+            /* Pull-to-refresh indicator */
+            .ptr-indicator {
+              position: absolute; top: -40px; left: 50%; transform: translateX(-50%);
+              width: 32px; height: 32px; border-radius: 9999px;
+              background: rgba(22,27,40,0.9); border: 1px solid rgba(255,255,255,0.08);
+              display: flex; align-items: center; justify-content: center;
+              opacity: 0; transition: opacity 0.2s, transform 0.2s;
+              z-index: 5;
+            }
+            .ptr-active .ptr-indicator { opacity: 1; }
+            .ptr-active .ptr-indicator svg { animation: spin 0.8s linear infinite; }
+            @keyframes spin { to { transform: rotate(360deg); } }
         }
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
+
+        /* Respect reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+          .orb-a, .orb-b { animation: none; opacity: 0.4; }
         }
-        input[type="number"] { -moz-appearance: textfield; }
-
-        .pin-disabled { opacity: 0.5; pointer-events: none; }
-
-        /* ---- Balance flash animation on success ---- */
-        @keyframes balance-flash {
-            0%   { color: #ffffff; transform: scale(1); }
-            35%  { color: #10b981; transform: scale(1.06); }
-            100% { color: #ffffff; transform: scale(1); }
-        }
-        .flash-balance { animation: balance-flash 0.9s ease-out; }
-
-        /* ---- Skeleton pulse ---- */
-        @keyframes sk-pulse {
-            0%, 100% { opacity: 1; }
-            50%      { opacity: 0.4; }
-        }
-        .skeleton { animation: sk-pulse 1.4s ease-in-out infinite; }
-
-        /* ---- Modal transitions ---- */
-        .modal-hidden { opacity: 0; pointer-events: none; }
-        .modal-visible { opacity: 1; pointer-events: auto; }
-        .modal-card-hidden { transform: scale(0.96) translateY(8px); opacity: 0; }
-        .modal-card-visible { transform: scale(1) translateY(0); opacity: 1; }
-
-        /* ---- Slide-down toast ---- */
-        .toast-hidden { transform: translateY(-120%); opacity: 0; }
-        .toast-visible { transform: translateY(0); opacity: 1; }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans antialiased selection:bg-blue-500/30 min-h-screen flex flex-col pb-6">
+<body class="bg-ink-950 text-gray-100 font-sans antialiased selection:bg-accent/30 min-h-screen flex flex-col overflow-x-hidden">
+
+    <!-- ============ Ambient background orbs ============ -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10" aria-hidden="true">
+      <div class="orb-a absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-accent/15 blur-[100px]"></div>
+      <div class="orb-b absolute -bottom-40 -right-20 w-[420px] h-[420px] rounded-full bg-indigo-500/15 blur-[100px]"></div>
+    </div>
 
     <!-- ============== Toast notifications ============== -->
     <div id="notification-area"
-         class="fixed top-0 left-0 right-0 z-50 flex flex-col items-center gap-2 p-4 pointer-events-none transition-all duration-300 toast-hidden">
+         role="status"
+         aria-live="polite"
+         class="fixed top-0 left-0 right-0 z-50 flex flex-col items-center gap-2 p-4 safe-top safe-px pointer-events-none transition-all duration-300 toast-hidden">
     </div>
 
     <!-- ============== Confirm Modal (custom, dark) ============== -->
     <div id="confirm-modal"
-         class="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm transition-opacity duration-200 modal-hidden">
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="confirm-title"
+         class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-5 bg-black/70 backdrop-blur-md transition-opacity duration-200 modal-hidden">
         <div id="confirm-modal-card"
-             class="w-full max-w-sm bg-gray-800 border border-gray-700 rounded-3xl p-6 shadow-2xl transition-all duration-200 modal-card-hidden">
+             class="w-full max-w-sm glass border border-white/10 rounded-3xl p-6 shadow-card transition-all duration-200 modal-card-hidden safe-bottom">
             <div class="flex items-start gap-4">
                 <div id="confirm-icon-wrap"
-                     class="flex-shrink-0 w-11 h-11 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center">
+                     class="flex-shrink-0 w-11 h-11 rounded-2xl bg-rose-500/15 text-rose-400 flex items-center justify-center">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -75,11 +264,11 @@
             </div>
             <div class="flex gap-3 mt-6">
                 <button id="confirm-cancel"
-                        class="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-100 font-semibold text-sm py-3 rounded-xl transition-colors">
+                        class="press flex-1 bg-white/5 hover:bg-white/10 text-gray-100 font-semibold text-sm py-3.5 rounded-2xl transition-colors focus-ring">
                     Cancel
                 </button>
                 <button id="confirm-accept"
-                        class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-semibold text-sm py-3 rounded-xl transition-colors">
+                        class="press flex-1 bg-rose-500 hover:bg-rose-600 text-white font-semibold text-sm py-3.5 rounded-2xl transition-colors shadow-glow-rose focus-ring">
                     Void
                 </button>
             </div>
@@ -88,22 +277,28 @@
 
     <!-- ============== Admin Modal ============== -->
     <div id="admin-modal"
-         class="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm transition-opacity duration-200 modal-hidden">
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="admin-modal-title"
+         class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/70 backdrop-blur-md transition-opacity duration-200 modal-hidden">
         <div id="admin-modal-card"
-             class="w-full max-w-md max-h-[85vh] overflow-y-auto no-scrollbar bg-gray-800 border border-gray-700 rounded-3xl shadow-2xl transition-all duration-200 modal-card-hidden">
+             class="w-full max-w-md max-h-[92vh] sm:max-h-[85vh] overflow-y-auto no-scrollbar glass border border-white/10 sm:rounded-3xl rounded-t-3xl shadow-card transition-all duration-200 modal-card-hidden safe-bottom">
 
             <!-- Header -->
-            <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-700 sticky top-0 bg-gray-800 rounded-t-3xl z-10">
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5 sticky top-0 glass z-10 sm:rounded-t-3xl rounded-t-3xl">
+                <!-- Drag handle (mobile) -->
+                <div class="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/15 sm:hidden"></div>
+                <h3 id="admin-modal-title" class="text-base font-bold text-white flex items-center gap-2 mt-2 sm:mt-0">
+                    <svg class="w-4 h-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
-                    <span id="admin-modal-title">Admin Access</span>
+                    <span>Admin Access</span>
                 </h3>
                 <button id="admin-close"
-                        class="text-gray-400 hover:text-white p-1 rounded-lg transition-colors">
+                        class="press text-gray-400 hover:text-white p-2 -mr-2 rounded-xl transition-colors focus-ring"
+                        aria-label="Close admin panel">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -112,13 +307,13 @@
 
             <!-- Step 1: admin PIN login -->
             <div id="admin-login-step" class="p-6">
-                <p class="text-sm text-gray-400 mb-4 leading-relaxed">
+                <p class="text-sm text-gray-400 mb-5 leading-relaxed">
                     Enter the admin PIN to manage users, PINs, and avatars.
                 </p>
                 <input type="password" id="admin-pin-input" inputmode="numeric" placeholder="••••"
-                       class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3.5 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 tracking-[0.5em] font-mono text-xl text-center">
+                       class="w-full bg-ink-900 border border-white/10 rounded-2xl px-4 py-4 text-white outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 tracking-[0.5em] font-mono text-xl text-center transition-all">
                 <button id="admin-login-btn"
-                        class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm py-3.5 rounded-xl transition-colors">
+                        class="press w-full mt-4 bg-accent hover:bg-accent-600 text-white font-semibold text-sm py-4 rounded-2xl transition-colors shadow-glow-blue focus-ring">
                     Enter
                 </button>
             </div>
@@ -128,32 +323,31 @@
                 <!-- Existing users -->
                 <div class="px-6 pt-5">
                     <h4 class="text-xs font-bold tracking-widest text-gray-500 uppercase mb-3">Current Users</h4>
-                    <div id="admin-user-list" class="flex flex-col gap-2"></div>
+                    <div id="admin-user-list" class="flex flex-col gap-2 max-h-72 overflow-y-auto no-scrollbar pr-1"></div>
                 </div>
 
                 <!-- Add new user -->
-                <div class="px-6 pt-6 pb-6 mt-4 border-t border-gray-700">
+                <div class="px-6 pt-6 pb-6 mt-5 border-t border-white/5">
                     <h4 class="text-xs font-bold tracking-widest text-gray-500 uppercase mb-3">Add New User</h4>
                     <div class="flex flex-col gap-3">
                         <input type="text" id="new-username" placeholder="Username (no spaces)"
-                               class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
+                               class="w-full bg-ink-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 text-sm transition-all">
                         <input type="password" id="new-pin" inputmode="numeric" placeholder="PIN (digits only)"
-                               class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm tracking-widest">
+                               class="w-full bg-ink-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 text-sm tracking-widest transition-all">
                         <input type="text" id="new-display-name" placeholder="Display name (optional)"
-                               class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
-                        <select id="new-color"
-                                class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
-                            <option value="blue">Blue</option>
-                            <option value="indigo">Indigo</option>
-                            <option value="emerald">Emerald</option>
-                            <option value="amber">Amber</option>
-                            <option value="rose">Rose</option>
-                            <option value="purple">Purple</option>
-                            <option value="cyan">Cyan</option>
-                            <option value="pink">Pink</option>
-                        </select>
+                               class="w-full bg-ink-900 border border-white/10 rounded-2xl px-4 py-3.5 text-white outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 text-sm transition-all">
+
+                        <!-- Color swatch grid (replaces dropdown) -->
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-500 mb-2">Avatar color</span>
+                            <div id="new-color-grid" class="grid grid-cols-8 gap-2">
+                                <!-- swatches injected by app.js -->
+                            </div>
+                            <input type="hidden" id="new-color" value="blue">
+                        </div>
+
                         <button id="add-user-btn"
-                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                                class="press w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm py-4 rounded-2xl transition-colors shadow-glow-emerald flex items-center justify-center gap-2 focus-ring">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
                             </svg>
@@ -165,115 +359,163 @@
         </div>
     </div>
 
-    <main class="max-w-md mx-auto w-full flex flex-col px-5 py-6 flex-1">
+    <main class="max-w-md mx-auto w-full flex flex-col px-5 pt-6 pb-8 flex-1 safe-top safe-bottom">
 
         <!-- ============== Header (with admin gear) ============== -->
-        <header class="mb-8 flex-shrink-0 text-center relative" id="global-header">
+        <header class="mb-6 flex-shrink-0 text-center relative" id="global-header">
             <button id="admin-gear-btn"
-                    class="absolute right-0 top-0 text-gray-500 hover:text-white bg-gray-800 hover:bg-gray-700 p-2 rounded-xl transition-colors"
-                    title="Admin">
+                    class="press absolute right-0 top-0 text-gray-500 hover:text-white bg-white/5 hover:bg-white/10 p-2.5 rounded-2xl transition-colors focus-ring"
+                    title="Admin"
+                    aria-label="Open admin panel">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
             </button>
-            <div class="inline-flex items-center justify-center w-12 h-12 bg-gray-800 border border-gray-700 rounded-2xl mb-3 shadow-sm">
-                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-accent/20 to-indigo-500/20 border border-white/10 mb-3 shadow-glow-blue">
+                <svg class="w-6 h-6 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
             </div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Safe Manager</h1>
+            <h1 class="text-2xl font-extrabold tracking-tight text-white">Safe Manager</h1>
         </header>
 
         <!-- ============== Login View ============== -->
-        <section id="login-view" class="flex flex-col gap-8 w-full mt-4">
+        <section id="login-view" class="flex flex-col gap-7 w-full mt-2 view-enter">
 
             <div class="flex flex-col gap-3">
-                <span class="text-sm font-medium text-gray-400 text-center uppercase tracking-wider">Select Profile</span>
+                <span class="text-xs font-semibold text-gray-500 text-center uppercase tracking-[0.2em]">Select Profile</span>
                 <!-- User grid is rendered dynamically by app.js -->
-                <div id="user-grid" class="grid grid-cols-2 gap-3"></div>
+                <div id="user-grid" class="grid grid-cols-2 gap-3 stagger"></div>
             </div>
 
-            <div id="pin-container" class="flex flex-col gap-2 pin-disabled transition-opacity duration-300">
+            <div id="pin-container" class="flex flex-col gap-4 pin-disabled transition-opacity duration-300">
                 <span id="pin-label" class="text-sm font-medium text-gray-400 text-center">Enter PIN</span>
-                <div class="relative">
-                    <input type="password" id="pin-input" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
-                           class="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-4 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 tracking-[0.5em] font-mono text-2xl shadow-inner transition-all text-center">
+
+                <!-- PIN dots indicator -->
+                <div id="pin-dots" class="flex items-center justify-center gap-3" aria-hidden="true"></div>
+
+                <!-- Hidden native input (drives auto-submit + IME) -->
+                <div class="relative h-12">
+                    <input type="password" id="pin-input" inputmode="numeric" pattern="[0-9]*" placeholder=""
+                           autocomplete="off"
+                           class="w-full h-full bg-transparent border-0 text-transparent caret-transparent outline-none text-center tracking-[0.5em] font-mono text-2xl opacity-0"
+                           aria-label="PIN input"
+                           tabindex="0">
                     <div id="login-spinner"
-                         class="absolute inset-0 bg-gray-800 rounded-2xl flex items-center justify-center hidden">
-                        <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                         class="absolute inset-0 flex items-center justify-center hidden pointer-events-none">
+                        <svg class="animate-spin h-6 w-6 text-accent-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                         </svg>
                     </div>
                 </div>
+
+                <!-- Numeric keypad (touch-friendly) -->
+                <div id="pin-keypad" class="grid grid-cols-3 gap-2.5 mt-2 select-none">
+                    <!-- buttons injected by app.js -->
+                </div>
+                <p class="text-center text-[11px] text-gray-600 mt-1">Type on your keyboard or tap the digits above</p>
             </div>
 
         </section>
 
         <!-- ============== Dashboard View ============== -->
-        <section id="dashboard-view" class="flex flex-col gap-8 hidden w-full">
+        <section id="dashboard-view" class="flex flex-col gap-6 hidden w-full">
 
-            <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+            <!-- Top bar: user + actions -->
+            <div class="flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <div id="user-avatar-mini"
-                         class="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-sm border border-blue-500/30">
+                         class="w-9 h-9 rounded-xl bg-accent/15 text-accent-400 flex items-center justify-center font-bold text-sm border border-accent/30">
                         A
                     </div>
-                    <span id="logged-in-user" class="text-sm font-bold text-white tracking-wide">Ayman</span>
+                    <div class="flex flex-col leading-tight">
+                        <span id="logged-in-user" class="text-sm font-bold text-white tracking-wide">Ayman</span>
+                        <span class="text-[10px] text-gray-500">Signed in</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1">
                     <button id="refresh-btn"
-                            class="text-gray-400 hover:text-white bg-transparent hover:bg-gray-800 p-2 rounded-lg transition-colors"
-                            title="Refresh">
+                            class="press text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2.5 rounded-xl transition-colors focus-ring"
+                            title="Refresh"
+                            aria-label="Refresh data">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
                     </button>
                     <button id="logout-btn"
-                            class="text-xs font-semibold text-gray-400 hover:text-white bg-transparent hover:bg-gray-800 px-3 py-1.5 rounded-lg transition-colors">
+                            class="press text-xs font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3.5 py-2.5 rounded-xl transition-colors focus-ring">
                         Logout
                     </button>
                 </div>
             </div>
 
-            <div class="flex flex-col items-center justify-center py-4 relative">
-                <div class="absolute w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                <span class="text-xs text-gray-500 font-bold tracking-widest uppercase mb-1 z-10">Safe Balance</span>
-                <h2 id="current-balance"
-                    class="text-6xl font-extrabold text-white tracking-tighter z-10 drop-shadow-sm transition-colors duration-300">
-                    <span class="text-2xl text-gray-500 font-medium mr-1">EGP</span>0.00
-                </h2>
+            <!-- Balance hero card -->
+            <div class="relative">
+                <div id="balance-card"
+                     class="relative shimmer-sweep overflow-hidden rounded-3xl p-6 card-hi border border-white/10"
+                     style="background: linear-gradient(135deg, rgba(59,130,246,0.10) 0%, rgba(99,102,241,0.08) 50%, rgba(22,27,40,0.85) 100%);">
+                    <div class="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-accent/15 blur-3xl pointer-events-none"></div>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] text-gray-400 font-bold tracking-[0.2em] uppercase">Safe Balance</span>
+                            <span id="balance-delta" class="text-[11px] font-semibold tabular px-2 py-0.5 rounded-full bg-white/5 text-gray-400 hidden"></span>
+                        </div>
+                        <h2 id="current-balance"
+                            class="text-5xl font-extrabold text-white tracking-tight tabular leading-none transition-colors duration-300"
+                            aria-live="polite">
+                            <span class="text-base text-gray-500 font-medium mr-1 align-middle">EGP</span><span class="balance-amount">0.00</span>
+                        </h2>
+                    </div>
+                </div>
             </div>
 
             <!-- ============== Transaction Form ============== -->
             <form id="transaction-form" class="flex flex-col gap-3" autocomplete="off">
-                <input type="number" id="amount-input" inputmode="decimal" min="0" step="0.01"
-                       placeholder="Amount (e.g. 150)"
-                       class="w-full bg-gray-800 border-none rounded-xl pl-4 pr-4 py-4 text-white outline-none focus:ring-1 focus:ring-blue-500 font-medium text-lg placeholder-gray-500 transition-all">
+                <!-- Amount with EGP prefix -->
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm pointer-events-none">EGP</span>
+                    <input type="number" id="amount-input" inputmode="decimal" min="0" step="0.01"
+                           placeholder="0.00"
+                           class="w-full bg-ink-850 border border-white/10 rounded-2xl pl-14 pr-4 py-4 text-white outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 font-bold text-xl placeholder-gray-600 tabular transition-all">
+                </div>
 
+                <!-- Quick amount chips -->
+                <div id="quick-amounts" class="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+                    <button type="button" data-amount="50"   class="press quick-amt flex-shrink-0 text-xs font-semibold text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full transition-colors focus-ring">+50</button>
+                    <button type="button" data-amount="100"  class="press quick-amt flex-shrink-0 text-xs font-semibold text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full transition-colors focus-ring">+100</button>
+                    <button type="button" data-amount="500"  class="press quick-amt flex-shrink-0 text-xs font-semibold text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full transition-colors focus-ring">+500</button>
+                    <button type="button" data-amount="1000" class="press quick-amt flex-shrink-0 text-xs font-semibold text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full transition-colors focus-ring">+1,000</button>
+                    <button type="button" data-amount="5000" class="press quick-amt flex-shrink-0 text-xs font-semibold text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2 rounded-full transition-colors focus-ring">+5,000</button>
+                </div>
+
+                <!-- Description -->
                 <div class="relative">
                     <input type="text" id="desc-input" maxlength="150" placeholder="What is this for?"
-                           class="w-full bg-gray-800 border-none rounded-xl pl-4 pr-16 py-4 text-white outline-none focus:ring-1 focus:ring-blue-500 font-medium text-sm placeholder-gray-500 transition-all">
+                           list="desc-suggestions"
+                           class="w-full bg-ink-850 border border-white/10 rounded-2xl pl-4 pr-16 py-4 text-white outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 font-medium text-sm placeholder-gray-600 transition-all">
                     <span id="desc-counter"
-                          class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-gray-500 pointer-events-none select-none">
+                          class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-gray-500 pointer-events-none select-none tabular">
                         0/150
                     </span>
+                    <datalist id="desc-suggestions"></datalist>
                 </div>
 
                 <div class="flex gap-3 mt-1">
                     <button type="submit" data-type="IN" id="btn-deposit"
-                            class="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 active:bg-emerald-500/30 disabled:opacity-50 font-semibold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                            class="press flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 active:bg-emerald-500/30 disabled:opacity-50 font-bold text-sm py-4 rounded-2xl transition-all flex items-center justify-center gap-2 focus-ring">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
                         </svg>
                         Deposit
                     </button>
                     <button type="submit" data-type="OUT" id="btn-withdraw"
-                            class="flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 active:bg-rose-500/30 disabled:opacity-50 font-semibold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                            class="press flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 active:bg-rose-500/30 disabled:opacity-50 font-bold text-sm py-4 rounded-2xl transition-all flex items-center justify-center gap-2 focus-ring">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"/>
                         </svg>
@@ -282,10 +524,11 @@
                 </div>
             </form>
 
-            <div class="flex flex-col mt-4">
+            <!-- History -->
+            <div class="flex flex-col mt-2" id="history-wrap">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-xs font-bold tracking-widest text-gray-500 uppercase">Recent Activity</h3>
-                    <span id="last-refreshed" class="text-[10px] text-gray-600 font-medium"></span>
+                    <h3 class="text-xs font-bold tracking-[0.2em] text-gray-500 uppercase">Recent Activity</h3>
+                    <span id="last-refreshed" class="text-[10px] text-gray-600 font-medium tabular"></span>
                 </div>
                 <div id="history-container" class="flex flex-col"></div>
             </div>
